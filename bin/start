@@ -27,7 +27,7 @@ case "$SENSU_SERVICE" in
   client)
     DEPENDENCIES="client transport"
     DIRS="$CONFIG_DIR"
-    rm -rf ${CHECK_DIR}/*
+    rm -rf "${CHECK_DIR}"/*
 
     if [[ "${TRANSPORT_NAME}" == "redis" ]]; then
       DEPENDENCIES="redis $DEPENDENCIES"
@@ -44,8 +44,7 @@ case "$SENSU_SERVICE" in
     process_template $CHECK_DIR
     process_template $HANDLERS_DIR
 
-    for INDEX in $DEPENDENCIES
-    do
+    for INDEX in $DEPENDENCIES; do
       envtpl -in /etc/sensu/templates/${INDEX}.json.tmpl > $CONFIG_DIR/${INDEX}.json
     done
 
@@ -63,9 +62,13 @@ case "$SENSU_SERVICE" in
 
     # For checks which need access to the host's /dev, /proc or /sys filesystem,
     # adjust the checks to the directories mounted from the host
-    for dir in $(gem env gempath | sed -e 's/:/ /g'); do
+    for dir in $(gem env gemdir) $(gem env gemdir)/bin /opt/sensu/embedded/bin; do
       if compgen -G "${dir}/*.rb" > /dev/null; then
-        sed -i -e "s|/dev|$HOST_DEV_DIR|g" -e "s|/proc|$HOST_PROC_DIR|g" -e "s|/sys|$HOST_SYS_DIR|g" ${dir}/*.rb
+        sed -i \
+            -e "s|\(['\"]\)/dev/|\1${HOST_DEV_DIR%/}/|g" \
+            -e "s|\(['\"]\)/proc/|\1${HOST_PROC_DIR%/}/|g" \
+            -e "s|\(['\"]\)/sys/|\1${HOST_SYS_DIR%/}/|g" \
+            ${dir}/*.rb
       fi
     done
 
